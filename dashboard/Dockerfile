@@ -3,8 +3,8 @@ WORKDIR /app
 
 # Install dependencies only when needed
 FROM base AS deps
-COPY package.json package-lock.json* ./
-RUN npm ci
+COPY package.json ./
+RUN npm install
 
 # Build the Next.js app
 FROM base AS builder
