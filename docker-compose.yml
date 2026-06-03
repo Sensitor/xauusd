@@ -15,7 +15,7 @@ services:
       POSTGRES_PASSWORD: goldmind
       POSTGRES_DB: goldmind
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       # Auto-apply the schema on first boot.
