@@ -30,20 +30,66 @@ T = TypeVar("T", bound=BaseModel)
 
 Role = str  # "reasoning" | "vision" | "fast"
 
+# Role-appropriate defaults per provider. Used when the configured model's
+# provider has no key but the *other* provider does — so a single key
+# (e.g. only OPENAI_API_KEY) transparently powers every LLM role instead of
+# silently degrading three of the agents to their deterministic fallbacks.
+_OPENAI_DEFAULTS: dict[Role, str] = {"reasoning": "gpt-4o", "vision": "gpt-4o", "fast": "gpt-4o-mini"}
+_ANTHROPIC_DEFAULTS: dict[Role, str] = {
+    "reasoning": "claude-sonnet-4-6",
+    "vision": "claude-sonnet-4-6",  # Claude is multimodal, a valid vision fallback
+    "fast": "claude-haiku-4-5-20251001",
+}
 
-def get_chat_model(role: Role = "reasoning", settings: Settings | None = None) -> Any | None:
-    """Return a configured LangChain chat model for ``role`` or ``None`` if the
-    required provider key is missing."""
+
+def _provider_of(model_name: str) -> str:
+    return "anthropic" if model_name.startswith("claude") else "openai"
+
+
+def resolve_model(role: Role = "reasoning", settings: Settings | None = None) -> tuple[str | None, str]:
+    """Resolve ``role`` to ``(provider, model_name)`` given the configured keys.
+
+    Honors the configured model first; if its provider has no key but the other
+    provider does, transparently falls back to a role-appropriate model on the
+    provider that *is* configured. ``provider`` is ``None`` when no key at all is
+    available (the caller then degrades to its deterministic path).
+    """
     s = settings or get_settings()
     model_name = {"reasoning": s.reasoning_model, "vision": s.vision_model, "fast": s.fast_model}.get(
         role, s.reasoning_model
     )
-    is_anthropic = model_name.startswith("claude")
+    provider = _provider_of(model_name)
+    have_openai, have_anthropic = bool(s.openai_api_key), bool(s.anthropic_api_key)
+
+    if provider == "anthropic" and not have_anthropic and have_openai:
+        fallback = _OPENAI_DEFAULTS.get(role, "gpt-4o")
+        log.info("llm_provider_fallback", role=role, requested=model_name, using=f"openai:{fallback}")
+        return "openai", fallback
+    if provider == "openai" and not have_openai and have_anthropic:
+        fallback = _ANTHROPIC_DEFAULTS.get(role, "claude-sonnet-4-6")
+        log.info("llm_provider_fallback", role=role, requested=model_name, using=f"anthropic:{fallback}")
+        return "anthropic", fallback
+
+    if (provider == "anthropic" and have_anthropic) or (provider == "openai" and have_openai):
+        return provider, model_name
+    return None, model_name  # no usable key for either provider
+
+
+def get_chat_model(role: Role = "reasoning", settings: Settings | None = None) -> Any | None:
+    """Return a configured LangChain chat model for ``role`` or ``None`` if no
+    provider key is available (the caller then uses its deterministic fallback).
+
+    A single configured key powers every role: if the role's configured model is
+    a Claude model but only ``OPENAI_API_KEY`` is set, it transparently uses an
+    OpenAI model of the same tier (and vice-versa). See :func:`resolve_model`.
+    """
+    s = settings or get_settings()
+    provider, model_name = resolve_model(role, s)
+    if provider is None:
+        return None
 
     try:
-        if is_anthropic:
-            if not s.anthropic_api_key:
-                return None
+        if provider == "anthropic":
             from langchain_anthropic import ChatAnthropic
 
             return ChatAnthropic(
@@ -53,8 +99,6 @@ def get_chat_model(role: Role = "reasoning", settings: Settings | None = None) -
                 api_key=s.anthropic_api_key,
                 max_tokens=2048,
             )
-        if not s.openai_api_key:
-            return None
         from langchain_openai import ChatOpenAI
 
         return ChatOpenAI(

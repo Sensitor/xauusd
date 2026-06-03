@@ -84,6 +84,12 @@ export interface AgentOutput {
   confidence: number; // [0, 1]
   reasoning: string;
   risk_flags: RiskFlag[];
+  /** Model that produced this output (e.g. "gpt-4o", "rule_based") or null. */
+  model?: string | null;
+  /** Wall-clock latency for this agent, milliseconds. */
+  latency_ms?: number | null;
+  /** Set when the agent degraded (its output is neutral / no-information). */
+  error?: string | null;
   /** Structured, agent-specific detail (only present on /decisions/{id}). */
   analysis?: Record<string, unknown>;
 }
@@ -195,6 +201,9 @@ export interface EvaluationResult {
 
 export interface EvaluateRequest {
   synthetic?: boolean;
+  // Feed sample macro/news/chart inputs so the LLM-backed agents actually run
+  // (needs a configured API key on the server; degrades gracefully otherwise).
+  enrich_llm?: boolean;
 }
 
 // ---------------------------------------------------------------------------

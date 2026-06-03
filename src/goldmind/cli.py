@@ -17,10 +17,25 @@ from goldmind.logging import configure_logging
 
 
 def _cmd_evaluate(args: argparse.Namespace) -> int:
-    from goldmind.backtest.synthetic import build_synthetic_context
     from goldmind.graph.workflow import Orchestrator
 
-    ctx = build_synthetic_context(drift=args.drift, volatility=args.volatility, seed=args.seed)
+    if args.llm:
+        from goldmind.backtest.synthetic import build_demo_llm_context
+        from goldmind.llm import resolve_model
+
+        ctx = build_demo_llm_context(drift=args.drift, volatility=args.volatility, seed=args.seed)
+        print("LLM agents enabled — resolved providers:")
+        for role in ("reasoning", "fast", "vision"):
+            provider, model = resolve_model(role)
+            status = f"{provider}:{model}" if provider else f"NO KEY (falls back to deterministic) — wanted {model}"
+            print(f"  {role:10s} -> {status}")
+        if ctx.screenshot_path is None:
+            print("  (no chart rendered — install Pillow to enable the Vision agent)")
+        print()
+    else:
+        from goldmind.backtest.synthetic import build_synthetic_context
+
+        ctx = build_synthetic_context(drift=args.drift, volatility=args.volatility, seed=args.seed)
     result = Orchestrator().evaluate(ctx)
     d = result.decision
     print(f"\nDecision: {d.decision.value}  (quality={d.quality_score}/100, net={d.net_directional_score:+.2f}, agreement={d.agreement:.0%})")
@@ -64,6 +79,7 @@ def main(argv: list[str] | None = None) -> int:
     ev.add_argument("--drift", type=float, default=0.00012)
     ev.add_argument("--volatility", type=float, default=0.0008)
     ev.add_argument("--seed", type=int, default=11)
+    ev.add_argument("--llm", action="store_true", help="Feed macro/news/chart inputs so the LLM agents run (needs an API key)")
     ev.set_defaults(func=_cmd_evaluate)
 
     bt = sub.add_parser("backtest", help="Run a backtest (passes remaining args through)")

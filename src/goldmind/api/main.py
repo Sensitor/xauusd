@@ -37,6 +37,10 @@ class EvaluateRequest(BaseModel):
     drift: float = 0.00008
     volatility: float = 0.0008
     screenshot_path: str | None = None
+    # Feed sample macro/news/chart inputs so the LLM-backed agents (Macro, News,
+    # Vision) actually run instead of abstaining. Requires a configured API key;
+    # with none, those agents still degrade gracefully to neutral.
+    enrich_llm: bool = False
 
 
 def _build_live_context() -> MarketContext:
@@ -114,7 +118,11 @@ def create_app() -> FastAPI:
     # ---- live analysis ----
     @app.post("/evaluate")
     def evaluate(req: EvaluateRequest) -> dict[str, Any]:
-        if req.synthetic:
+        if req.synthetic and req.enrich_llm:
+            from goldmind.backtest.synthetic import build_demo_llm_context
+
+            ctx = build_demo_llm_context(drift=req.drift, volatility=req.volatility)
+        elif req.synthetic:
             ctx = build_synthetic_context(drift=req.drift, volatility=req.volatility)
         else:
             try:
@@ -122,7 +130,10 @@ def create_app() -> FastAPI:
             except Exception as exc:  # broker not available
                 raise HTTPException(status_code=503, detail=f"live data unavailable: {exc}") from exc
         if req.screenshot_path:
-            ctx = MarketContext(symbol=ctx.symbol, as_of=ctx.as_of, candles=ctx.candles, account=ctx.account, screenshot_path=req.screenshot_path)
+            ctx = MarketContext(
+                symbol=ctx.symbol, as_of=ctx.as_of, candles=ctx.candles, account=ctx.account,
+                screenshot_path=req.screenshot_path, raw=ctx.raw,
+            )
         result: EvaluationResult = orchestrator().evaluate(ctx)
         app.state.last_eval = result
         from goldmind.observability import record_evaluation

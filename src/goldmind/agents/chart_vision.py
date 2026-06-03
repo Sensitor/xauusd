@@ -18,7 +18,7 @@ from goldmind.agents.base import BaseAgent
 from goldmind.core.context import MarketContext
 from goldmind.core.enums import AgentName, Bias, Severity
 from goldmind.core.schemas import AgentOutput, ChartPattern, ChartVisionOutput
-from goldmind.llm import complete_structured, get_chat_model
+from goldmind.llm import complete_structured, get_chat_model, resolve_model
 
 _KNOWN_PATTERNS = (
     "double_top, double_bottom, head_and_shoulders, inverse_head_and_shoulders, "
@@ -78,7 +78,7 @@ class ChartVisionAgent(BaseAgent):
             resistance_levels=[round(x, 4) for x in res.resistance_levels][:6],
             risk_areas=res.risk_areas[:6],
             image_ref=ctx.screenshot_path,
-            model=self.settings.vision_model,
+            model=resolve_model("vision", self.settings)[1],
         )
         # Reversal patterns against a trade are worth flagging.
         for p in res.patterns:

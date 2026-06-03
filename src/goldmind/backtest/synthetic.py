@@ -11,7 +11,7 @@ for evidence of edge.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import numpy as np
 import pandas as pd
@@ -90,3 +90,78 @@ def build_synthetic_context(
     as_of = as_of or base.index[-1].to_pydatetime()
     acct = account or AccountState(equity=equity, balance=equity, peak_equity=equity)
     return MarketContext(symbol="XAUUSD", as_of=as_of, candles=candles, account=acct)
+
+
+# A coherent "dovish surprise + risk-off" bullish-gold narrative. The price drift,
+# macro digest, and headlines all point the same way so the demo tells one story
+# and the agents corroborate rather than contradict.
+_DEMO_DIGEST = (
+    "US CPI surprised cooler (3.1% vs 3.4% expected) and core PPI softened; the "
+    "labor market is loosening (unemployment ticked to 4.1%). Fed funds futures now "
+    "price an earlier cut and several FOMC members struck a dovish tone. DXY rolled "
+    "over from its highs and the US 10Y yield eased ~12bp on the week. Geopolitical "
+    "tension in the Middle East is keeping a haven bid under gold; ETF holdings rose."
+)
+_DEMO_INDICATORS = [
+    {"name": "CPI YoY", "value": 3.1, "prior": 3.4, "surprise": -0.3},
+    {"name": "Core PPI MoM", "value": 0.1, "prior": 0.3, "surprise": -0.2},
+    {"name": "Unemployment Rate", "value": 4.1, "prior": 3.9, "surprise": 0.2},
+    {"name": "US10Y", "value": 4.18, "prior": 4.30, "surprise": -0.12},
+    {"name": "DXY", "value": 103.2, "prior": 104.6, "surprise": -1.4},
+]
+_DEMO_HEADLINES = [
+    {"title": "Gold extends gains as cooler US inflation revives Fed rate-cut bets", "source": "Reuters"},
+    {"title": "Dollar slips, Treasury yields fall after soft CPI print", "source": "Bloomberg"},
+    {"title": "Safe-haven demand firm as Middle East tensions escalate", "source": "Financial Times"},
+    {"title": "Gold ETF holdings climb to a multi-month high on dovish Fed repricing", "source": "Reuters"},
+    {"title": "Fed's officials signal patience, opening door to summer rate cut", "source": "Bloomberg"},
+]
+
+
+def build_demo_llm_context(
+    *,
+    as_of: datetime | None = None,
+    drift: float = 0.00016,
+    volatility: float = 0.0008,
+    seed: int | None = 11,
+    equity: float = 100_000.0,
+    render_chart: bool = True,
+    minutes_to_event: int = 180,
+) -> MarketContext:
+    """A synthetic context **enriched with macro/news/chart inputs** so the three
+    LLM-backed agents (Macro, News & Sentiment, Chart Vision) actually run instead
+    of abstaining for lack of data.
+
+    This is demo wiring, not a live feed (real feeds are roadmap milestone M1) — it
+    lets a single OpenAI/Anthropic key light up the full agent suite end-to-end. The
+    scheduled event is placed ``minutes_to_event`` ahead (default 180) so the news
+    event-gate is exercised without forcing a blackout veto.
+    """
+    ctx = build_synthetic_context(
+        as_of=as_of, drift=drift, volatility=volatility, seed=seed, equity=equity,
+    )
+    event_at = (ctx.as_of if ctx.as_of.tzinfo else ctx.as_of.replace(tzinfo=UTC)) + timedelta(minutes=minutes_to_event)
+    raw: dict[str, object] = {
+        "macro": {
+            "digest": _DEMO_DIGEST,
+            "indicators": _DEMO_INDICATORS,
+            "dxy_trend": "bearish",
+            "yields_trend": "bearish",
+            "risk_environment": "risk_off",
+        },
+        "headlines": _DEMO_HEADLINES,
+        "calendar": [
+            {"title": "FOMC Rate Decision", "importance": "high", "scheduled_at": event_at.isoformat()},
+        ],
+    }
+
+    screenshot_path: str | None = None
+    if render_chart:
+        from goldmind.backtest.chart_render import render_candles
+
+        screenshot_path = render_candles(ctx.candles[Timeframe.H1], title="XAUUSD H1 (demo)")
+
+    return MarketContext(
+        symbol=ctx.symbol, as_of=ctx.as_of, candles=ctx.candles, account=ctx.account,
+        screenshot_path=screenshot_path, raw=raw,
+    )

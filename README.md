@@ -102,6 +102,36 @@ LLM agents (macro / news sentiment / vision) **degrade gracefully** to neutral,
 low-confidence outputs when no `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` is set — so
 the system runs anywhere. Add keys (copy `.env.example` → `.env`) to enable them.
 
+### Turn the LLM agents on
+
+One key powers the whole suite. Put it in `.env` (leave the other blank):
+
+```bash
+cp .env.example .env
+echo 'OPENAI_API_KEY=sk-...your-key...' >> .env      # or ANTHROPIC_API_KEY=sk-ant-...
+```
+
+The provider is chosen by **which key is set** — with only `OPENAI_API_KEY`, the
+Claude-default roles transparently use `gpt-4o` / `gpt-4o-mini`; with only
+`ANTHROPIC_API_KEY`, the vision role uses Claude. You don't edit model names.
+
+The synthetic demo carries no macro/news/chart inputs, so the three LLM agents
+have nothing to read by default. Feed them sample inputs (and a rendered chart for
+Vision) with the `--llm` flag — it prints which provider each role resolved to:
+
+```bash
+PYTHONPATH=src python -m goldmind.cli evaluate --llm
+```
+
+In the dashboard, the **"AI agents: On"** toggle on the Overview does the same via
+`POST /evaluate {"enrich_llm": true}`; each agent card then shows the model that
+produced it (e.g. `gpt-4o`) and its latency.
+
+> These sample inputs are demo wiring, not a live feed — real macro/news/price
+> ingestion is roadmap milestone M1 ([docs/09](./docs/09-roadmap.md)). For the
+> Vision agent on real charts, pass a screenshot path (`POST /evaluate
+> {"screenshot_path": "..."}`); the demo renders one from the synthetic candles.
+
 Full stack (API + Postgres + Prometheus + Grafana):
 
 ```bash

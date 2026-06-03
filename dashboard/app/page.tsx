@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Activity,
   BarChart3,
@@ -7,9 +8,11 @@ import {
   LineChart,
   Percent,
   Sigma,
+  Sparkles,
   TrendingDown,
   Trophy,
 } from "lucide-react";
+import clsx from "clsx";
 import { api } from "@/lib/api";
 import { useApiResource } from "@/lib/useApi";
 import { mockEquityCurve } from "@/lib/mock";
@@ -30,7 +33,19 @@ function tone(value: number | null | undefined, good: number, bad: number): Stat
 
 export default function OverviewPage() {
   const perf = useApiResource(() => api.performance());
-  const evaluation = useApiResource(() => api.evaluate({ synthetic: true }));
+  const [aiMode, setAiMode] = useState(false);
+  const evaluation = useApiResource(
+    useCallback(() => api.evaluate({ synthetic: true, enrich_llm: aiMode }), [aiMode]),
+  );
+  // The hook fetches once on mount; re-run only when the AI toggle flips.
+  const firstRun = useRef(true);
+  useEffect(() => {
+    if (firstRun.current) {
+      firstRun.current = false;
+      return;
+    }
+    evaluation.refresh();
+  }, [aiMode, evaluation.refresh]);
   const p = perf.data;
   const e = evaluation.data;
   const scoringAgents = (e?.agents ?? []).filter(
@@ -39,11 +54,28 @@ export default function OverviewPage() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-lg font-semibold text-terminal-text">Overview</h1>
-        <p className="text-sm text-terminal-muted">
-          Live decision support for XAUUSD. Quality over quantity — the system stays flat unless conviction, agreement and risk all align.
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-lg font-semibold text-terminal-text">Overview</h1>
+          <p className="text-sm text-terminal-muted">
+            Live decision support for XAUUSD. Quality over quantity — the system stays flat unless conviction, agreement and risk all align.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setAiMode((v) => !v)}
+          disabled={evaluation.loading}
+          title="Feed macro/news/chart inputs so the LLM agents (Macro, News, Vision) run. Requires an API key on the server."
+          className={clsx(
+            "pill shrink-0 transition-colors disabled:opacity-60",
+            aiMode
+              ? "border-terminal-accent/50 bg-terminal-accent/15 text-terminal-accent"
+              : "border-terminal-border-strong bg-terminal-surface-2 text-terminal-muted hover:text-terminal-text",
+          )}
+        >
+          <Sparkles className="h-3.5 w-3.5" aria-hidden />
+          AI agents: {aiMode ? "On" : "Off"}
+        </button>
       </div>
 
       {/* Performance KPIs */}

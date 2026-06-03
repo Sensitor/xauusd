@@ -4,6 +4,7 @@ import {
   BookOpen,
   Bot,
   Brain,
+  Cpu,
   Eye,
   Gavel,
   Globe2,
@@ -11,6 +12,7 @@ import {
   Newspaper,
   Radar,
   ShieldHalf,
+  Sparkles,
 } from "lucide-react";
 import type { AgentName, AgentOutput, Bias } from "@/lib/types";
 import { fmtPct, humanize } from "@/lib/format";
@@ -103,6 +105,23 @@ export function AgentCard({ output, className }: AgentCardProps) {
       <p className="mt-3 flex-1 text-xs leading-relaxed text-terminal-text/85">
         {output.reasoning || "No reasoning provided."}
       </p>
+
+      {output.model ? (
+        <div className="mt-3 flex items-center gap-1.5 text-[10px] text-terminal-muted">
+          <span
+            className={clsx(
+              "pill",
+              output.model === "rule_based"
+                ? "border-terminal-border bg-terminal-surface-2 text-terminal-muted"
+                : "border-terminal-accent/40 bg-terminal-accent/10 text-terminal-accent",
+            )}
+          >
+            {output.model === "rule_based" ? <Cpu className="h-3 w-3" aria-hidden /> : <Sparkles className="h-3 w-3" aria-hidden />}
+            {output.model}
+          </span>
+          {typeof output.latency_ms === "number" ? <span className="tnum">{Math.round(output.latency_ms)} ms</span> : null}
+        </div>
+      ) : null}
 
       {flagCount > 0 ? (
         <div className="mt-3 border-t border-terminal-border pt-3">

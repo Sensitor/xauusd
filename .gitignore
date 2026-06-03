@@ -57,6 +57,7 @@ node_modules/
 .next/
 out/
 dashboard/.env*.local
+*.tsbuildinfo
 npm-debug.log*
 yarn-error.log*
 

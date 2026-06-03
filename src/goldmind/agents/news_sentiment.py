@@ -29,7 +29,7 @@ from goldmind.agents.base import BaseAgent
 from goldmind.core.context import MarketContext
 from goldmind.core.enums import AgentName, Bias, Severity
 from goldmind.core.schemas import AgentOutput, NewsEvent, NewsSentimentOutput
-from goldmind.llm import complete_structured, get_chat_model
+from goldmind.llm import complete_structured, get_chat_model, resolve_model
 
 # No-trade window around CRITICAL (high-impact) events.
 BLACKOUT_BEFORE_MIN = 30
@@ -138,7 +138,7 @@ class NewsSentimentAgent(BaseAgent):
                         f"- ({h.source}) {h.title}" for h in headlines[:25]
                     )
                     res: _SentimentLLM = complete_structured(model_obj, _SentimentLLM, _SYSTEM, human)
-                    sentiment, conf, reasoning, model = res.sentiment_score, res.confidence, res.reasoning, self.settings.fast_model
+                    sentiment, conf, reasoning, model = res.sentiment_score, res.confidence, res.reasoning, resolve_model("fast", self.settings)[1]
                 except Exception as exc:
                     self.log.warning("news_llm_failed", error=str(exc))
                     reasoning = f"{len(headlines)} headlines present but LLM scoring failed; sentiment treated as neutral."

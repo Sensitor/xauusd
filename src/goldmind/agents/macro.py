@@ -24,7 +24,7 @@ from goldmind.agents.base import BaseAgent
 from goldmind.core.context import MarketContext
 from goldmind.core.enums import AgentName, Bias, RiskEnvironment, Severity
 from goldmind.core.schemas import AgentOutput, MacroIndicator, MacroOutput
-from goldmind.llm import complete_structured, get_chat_model
+from goldmind.llm import complete_structured, get_chat_model, resolve_model
 
 # Sign of gold's reaction to a *positive* surprise in each release.
 # +1 => positive surprise is bullish for gold; -1 => bearish.
@@ -116,7 +116,8 @@ class MacroAgent(BaseAgent):
                 human = self._format_prompt(digest, indicators, dxy_trend, yields_trend, ctx)
                 res: _MacroLLM = complete_structured(model, _MacroLLM, _SYSTEM, human)
                 return self._build(res.macro_bias, res.confidence, res.reasoning, indicators,
-                                   res.risk_environment, res.dxy_trend, res.yields_trend, model=self.settings.reasoning_model)
+                                   res.risk_environment, res.dxy_trend, res.yields_trend,
+                                   model=resolve_model("reasoning", self.settings)[1])
             except Exception as exc:
                 self.log.warning("macro_llm_failed", error=str(exc))
 
