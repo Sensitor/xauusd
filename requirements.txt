@@ -1,0 +1,53 @@
+# =====================================================================
+# GoldMind AI — Core runtime dependencies
+# Python 3.11+ recommended.
+#
+# NOTE: MetaTrader5 is Windows-only and lives in requirements-mt5.txt so
+# that the rest of the stack remains installable on Linux/macOS (CI, VPS
+# analysis nodes, the research environment, etc.). The execution node that
+# talks to the broker terminal runs on Windows (or Wine) and installs it.
+# =====================================================================
+
+# --- Orchestration / LLM ---
+langgraph>=0.2.40
+langchain>=0.3.7
+langchain-core>=0.3.15
+langchain-openai>=0.2.8
+langchain-anthropic>=0.2.4
+
+# --- Data models / settings ---
+pydantic>=2.9.0
+pydantic-settings>=2.5.0
+
+# --- API / web ---
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+httpx>=0.27.0
+websockets>=13.0
+
+# --- Database ---
+SQLAlchemy>=2.0.35
+psycopg[binary]>=3.2.0          # modern psycopg3 driver
+alembic>=1.13.0
+
+# --- Quant / numerics ---
+numpy>=1.26.0
+pandas>=2.2.0
+scipy>=1.13.0
+scikit-learn>=1.5.0             # regime clustering, learning-engine models
+
+# --- Vision (Chart Vision agent pre-processing) ---
+pillow>=10.4.0
+
+# --- News / sentiment ingestion ---
+feedparser>=6.0.11
+beautifulsoup4>=4.12.0
+
+# --- Reliability / observability ---
+tenacity>=9.0.0                 # retries with backoff
+structlog>=24.4.0               # structured logging
+prometheus-client>=0.21.0       # metrics export
+
+# --- Utilities ---
+python-dateutil>=2.9.0
+pyyaml>=6.0.2

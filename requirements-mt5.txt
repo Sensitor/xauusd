@@ -1,0 +1,4 @@
+# MetaTrader 5 execution node (Windows / Wine only).
+# Install on the execution host in addition to requirements.txt:
+#   pip install -r requirements.txt -r requirements-mt5.txt
+MetaTrader5>=5.0.45

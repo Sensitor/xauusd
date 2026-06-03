@@ -1,0 +1,84 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html,
+  body {
+    @apply bg-terminal-bg text-terminal-text antialiased;
+    font-feature-settings: "tnum" 1, "cv01" 1;
+  }
+
+  /* Tabular figures for all numeric/financial readouts. */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Thin, dark scrollbars to match the terminal aesthetic. */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #222b3a;
+    border-radius: 9999px;
+    border: 2px solid #0a0e14;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #2f3b4f;
+  }
+
+  *:focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-xl border border-terminal-border bg-terminal-surface shadow-card;
+  }
+
+  .card-header {
+    @apply flex items-center justify-between gap-3 border-b border-terminal-border px-4 py-3;
+  }
+
+  .card-title {
+    @apply text-sm font-semibold tracking-wide text-terminal-text;
+  }
+
+  .card-subtitle {
+    @apply text-xs text-terminal-muted;
+  }
+
+  .label {
+    @apply text-[11px] font-medium uppercase tracking-wider text-terminal-muted;
+  }
+
+  .pill {
+    @apply inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium;
+  }
+
+  .table-th {
+    @apply whitespace-nowrap px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-terminal-muted;
+  }
+
+  .table-td {
+    @apply whitespace-nowrap px-3 py-2.5 text-sm text-terminal-text;
+  }
+
+  .nav-link {
+    @apply flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-terminal-muted transition-colors hover:bg-terminal-surface-2 hover:text-terminal-text;
+  }
+
+  .nav-link-active {
+    @apply bg-terminal-surface-2 text-terminal-text;
+  }
+}

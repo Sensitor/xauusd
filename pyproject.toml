@@ -1,0 +1,80 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "goldmind"
+version = "0.1.0"
+description = "GoldMind AI — an institutional-grade, multi-agent AI trading system for XAUUSD (Gold)."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Proprietary" }
+authors = [{ name = "GoldMind AI" }]
+keywords = ["trading", "xauusd", "gold", "langgraph", "multi-agent", "quant"]
+
+# Runtime deps are pinned in requirements*.txt to keep the Docker build cache
+# friendly and to separate the Windows-only MT5 dependency. pyproject lists the
+# logical extras so the package is still pip-installable as `goldmind[...]`.
+dependencies = [
+    "langgraph>=0.2.40",
+    "langchain>=0.3.7",
+    "langchain-openai>=0.2.8",
+    "langchain-anthropic>=0.2.4",
+    "pydantic>=2.9.0",
+    "pydantic-settings>=2.5.0",
+    "numpy>=1.26.0",
+    "pandas>=2.2.0",
+    "structlog>=24.4.0",
+    "tenacity>=9.0.0",
+]
+
+[project.optional-dependencies]
+api = ["fastapi>=0.115.0", "uvicorn[standard]>=0.32.0", "websockets>=13.0"]
+db = ["SQLAlchemy>=2.0.35", "psycopg[binary]>=3.2.0", "alembic>=1.13.0"]
+quant = ["scipy>=1.13.0", "scikit-learn>=1.5.0"]
+vision = ["pillow>=10.4.0"]
+news = ["feedparser>=6.0.11", "beautifulsoup4>=4.12.0"]
+mt5 = ["MetaTrader5>=5.0.45"]
+dev = ["pytest>=8.3.0", "pytest-asyncio>=0.24.0", "pytest-cov>=5.0.0", "ruff>=0.7.0", "mypy>=1.13.0"]
+
+[project.scripts]
+goldmind = "goldmind.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+goldmind = ["db/schema.sql", "py.typed"]
+
+# --------------------------------------------------------------------------
+# Tooling
+# --------------------------------------------------------------------------
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "C4", "SIM", "RUF"]
+ignore = [
+    "E501",   # line length handled by formatter
+    "UP042",  # custom StrEnum base is intentional (explicit __str__ for JSON/Pydantic)
+    "RUF001", # en-dashes in prose strings are intentional
+    "RUF002", # en-dashes in docstrings are intentional
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+pythonpath = ["src"]
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_unused_ignores = true
+ignore_missing_imports = true   # MetaTrader5, feedparser, etc. ship no stubs
+plugins = ["pydantic.mypy"]
+
+[tool.coverage.run]
+source = ["src/goldmind"]
+branch = true

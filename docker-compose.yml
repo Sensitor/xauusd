@@ -1,0 +1,77 @@
+# GoldMind AI — local/VPS stack.
+#
+#   docker compose up -d --build            # api + postgres + prometheus + grafana
+#   docker compose --profile dashboard up   # also build & run the Next.js dashboard
+#
+# The MT5 execution node is intentionally NOT here: MetaTrader5 is Windows-only
+# and runs on a separate Windows/Wine host that connects to this stack's Postgres
+# and API over the private network. See docs/08-deployment.md.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: goldmind
+      POSTGRES_PASSWORD: goldmind
+      POSTGRES_DB: goldmind
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Auto-apply the schema on first boot.
+      - ./src/goldmind/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U goldmind"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: .
+    env_file: .env
+    environment:
+      GOLDMIND_DATABASE_URL: postgresql+psycopg://goldmind:goldmind@postgres:5432/goldmind
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./deploy/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - promdata:/prometheus
+    ports:
+      - "9090:9090"
+    depends_on:
+      - api
+
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: goldmind
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./deploy/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafanadata:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+
+  dashboard:
+    profiles: ["dashboard"]
+    build: ./dashboard
+    environment:
+      NEXT_PUBLIC_API_BASE: http://localhost:8000
+    ports:
+      - "3001:3000"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
+  promdata:
+  grafanadata:

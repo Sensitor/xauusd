@@ -1,0 +1,47 @@
+{
+  "title": "GoldMind AI — Overview",
+  "uid": "goldmind-overview",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-24h", "to": "now" },
+  "panels": [
+    {
+      "type": "gauge",
+      "title": "Account Equity",
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
+      "targets": [{ "expr": "goldmind_account_equity" }]
+    },
+    {
+      "type": "gauge",
+      "title": "Drawdown %",
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "percentunit", "max": 0.06, "thresholds": { "steps": [ { "color": "green", "value": 0 }, { "color": "orange", "value": 0.012 }, { "color": "red", "value": 0.02 } ] } } },
+      "targets": [{ "expr": "goldmind_account_drawdown_pct" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Decisions / 5m by type",
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 0 },
+      "targets": [{ "expr": "sum by (decision) (increase(goldmind_evaluations_total[5m]))", "legendFormat": "{{decision}}" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Agent latency p95 (s)",
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 6 },
+      "targets": [{ "expr": "histogram_quantile(0.95, sum by (le, agent) (rate(goldmind_agent_latency_seconds_bucket[5m])))", "legendFormat": "{{agent}}" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Trades by outcome (cumulative)",
+      "gridPos": { "h": 7, "w": 6, "x": 12, "y": 6 },
+      "targets": [{ "expr": "sum by (outcome) (goldmind_trades_total)", "legendFormat": "{{outcome}}" }]
+    },
+    {
+      "type": "stat",
+      "title": "Circuit-breaker trips",
+      "gridPos": { "h": 7, "w": 6, "x": 18, "y": 6 },
+      "targets": [{ "expr": "sum(goldmind_circuit_breaker_trips_total)" }]
+    }
+  ]
+}
